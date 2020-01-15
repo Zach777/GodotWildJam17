@@ -9,7 +9,9 @@ func CoordsToIndex(coords):
 	return (coords[0]+coords[1]*columns)
 func CitiesAlreadyConnected(a,b):
 	return ([a,b] in Connections) or ([b,a] in Connections)
+
 func WhatsNearMeOnThe(direction,my_coords):#null when there's no tile or the tile is empty
+	#Return the tile that is one tile away from me in the direction I specify.
 	if direction == Types.Direction.Top:
 		if my_coords[1]==0:return [null,null]
 		else: 
@@ -72,7 +74,9 @@ func AreConnected(tile1,tile2, direction):#direction: tile2's position relative 
 	else:return false
 func IsAPath(type):#whether the tile type can connect two cities
 	return type in [Types.Tile.Rail_UD, Types.Tile.Rail_LR, Types.Tile.Rail_LD, Types.Tile.Rail_RD, Types.Tile.Rail_UL, Types.Tile.Rail_UR, Types.Tile.Rail_ULRD, Types.Tile.Station_UD, Types.Tile.Station_LR]
+
 func PathEnd(tile,pos):
+	#How does this work?
 	var dirs = Types.TileDirs[tile].duplicate(true)
 	if dirs.size()==2:
 		dirs.erase(Opposite(pos))
@@ -80,29 +84,64 @@ func PathEnd(tile,pos):
 		return dirs[0]
 	else:
 		pass#TODO: Code for handling the Intersection tile, Park, Generator,and Repair tiles
+	
 func CheckForConnections():
 	var score = 0
+	
+	#City tile that we check in each direction
 	for citiesTile in CitiesCoords:
+		
+		#The directions we check in.
 		var directions = [Types.Direction.Top, Types.Direction.Left, Types.Direction.Right, Types.Direction.Down]
 		for init_dir in directions:
-			var dir_str = DirToStr(init_dir)
+			
+			#Initialize everything so we can begin.
 			var curr_tile = citiesTile
 			var curr_tile_type = Types.Tile.Buildings
 			var railsCount = 0
 			var dir = init_dir
-			while WhatsNearMeOnThe(dir,curr_tile)[0]!=null and AreConnected(curr_tile_type,WhatsNearMeOnThe(dir,curr_tile)[0],dir):
+			
+			#Start from the initial dir and follow the path until
+			#you reach the end or another city.
+			while( WhatsNearMeOnThe(dir,curr_tile)[0] != null &&
+					AreConnected(curr_tile_type, WhatsNearMeOnThe(dir,curr_tile)[0], dir) ):
+				
+				#Next tile on path
 				var nearbyTile = WhatsNearMeOnThe(dir,curr_tile)
-				if nearbyTile[0]==Types.Tile.Buildings and railsCount>0 and !CitiesAlreadyConnected(nearbyTile[1],curr_tile):
+				
+				#We have reached another city.
+				if( nearbyTile[0] == Types.Tile.Buildings and 
+						railsCount > 0 and 
+						!CitiesAlreadyConnected(nearbyTile[1],curr_tile) ):
 					score +=1
 					Connections.append([citiesTile,nearbyTile[1]])
 					break
+				
+				#We have not reached an end point yet.
+				#Keep following the path.
 				elif IsAPath(nearbyTile[0]):
+					#If the tile we are on is not a cross section, change dir appropriately.
 					if nearbyTile[0]!=Types.Tile.Rail_ULRD:
 						dir = PathEnd(nearbyTile[0],dir)
+					
+					#We have followed one rail. 
+					#Increment our rails followed count.
 					railsCount+=1
+					
+					#Debug the path finding.
 					print('+1')
+					var testcolors = [Color.blue,Color.rebeccapurple,Color.red,Color.cornflower,Color.blue,Color.rebeccapurple,Color.red,Color.cornflower,Color.blue,Color.rebeccapurple,Color.red,Color.cornflower,Color.blue,Color.rebeccapurple,Color.red,Color.cornflower]
+					get_child(CoordsToIndex(nearbyTile[1])).modulate = testcolors[CitiesCoords.find(citiesTile)]
+					
+					#Not sure what this does.
 					var step_data = nearbyTile.duplicate(true)
 					curr_tile_type = step_data[0]
 					curr_tile = step_data[1]
+				
+				#We probably hit a city that has already been connected.
 				else: break
+				
+				
+	
+	#Let the player know how many points they scored.
 	OS.alert(str(score))
